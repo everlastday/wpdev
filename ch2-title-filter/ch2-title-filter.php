@@ -2,8 +2,7 @@
   /*
   Plugin Name: Chapter 2 – Title Filter
   Plugin URI:
-  Description: Declares a plugin that will be visible in the
-  WordPress admin interface
+  Description: Declares a plugin that will be visible in the WordPress admin interface
   Version: 1.0
   Author: WestSIDe
   Author URI: http://ylefebvre.ca
