@@ -66,4 +66,12 @@
       }
     }
   }
+
+  add_action( 'admin_menu', 'ch2pho_settings_menu' );
+
+  function ch2pho_settings_menu() {
+    add_options_page( 'My Google Analytics Configuration',
+      'My Google Analytics', 'manage_options',
+      __FILE__, 'ch2pho_config_page' );
+  }
 ?>
