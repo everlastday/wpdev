@@ -1,15 +1,15 @@
 <?php
   /*
-  Plugin Name: Chapter 2 - Plugin Header
+  Plugin Name: Chapter 2 - Page Header Output Meta Boxes
   Plugin URI:
-  Description: Declares a plugin that will be visible in the
+  Description: Page Header Output Meta Boxes
   WordPress admin interface
   Version: 1.0
   Author: WestSIDe
   Author URI: http://ylefebvre.ca
   License: GPLv2
   */
-
+  global $options_page;
 
   add_action('wp_head', 'ch2pho_page_header_output');
 
@@ -93,6 +93,8 @@
   add_action( 'admin_menu', 'ch2pho_settings_menu' );
 
   function ch2pho_settings_menu() {
+
+    global $options_page;
     $options_page = add_options_page( 'My Google Analytics Configuration',
       'My Google Analytics', 'manage_options',
       'ch2pho-my-google-analytics', 'ch2pho_config_page' );
@@ -108,12 +110,22 @@
       'title' => 'Instructions',
       'callback' => 'ch2pho_plugin_help_instructions'
     ) );
-    $screen->add_help_tab( array(
+    $screen->add_help_tweab( array(
       'id' => 'ch2pho-plugin-help-faq',
       'title' => 'FAQ',
       'callback' => 'ch2pho_plugin_help_faq',
     ) );
     $screen->set_help_sidebar( '<p>This is the sidebar content</p>' );
+
+    global $options_page;
+
+    //add_meta_box( $id, $title, $callback, $page, $context, $priority, $callback_args );
+
+    add_meta_box('ch2pho_general_meta_box', 'General Settings', 'ch2pho_plugin_meta_box', $options_page, 'normal', 'core');
+    add_meta_box('ch2pho_second_meta_box', 'Second Settings Section', 'ch2pho_second_meta_box', $options_page, 'normal', 'core');
+
+
+
   }
   function ch2pho_plugin_help_instructions() { ?>
     <p>These are instructions explaining how to use this
@@ -128,6 +140,7 @@
   function ch2pho_config_page() {
 // Retrieve plugin configuration options from database
     $options = get_option( 'ch2pho_options' );
+    global $options_page;
     ?>
     <div id="ch2pho-general" class="wrap">
       <h2>My Google Analytics</h2>
@@ -140,16 +153,39 @@
         <input type="hidden" name="action" value="save_ch2pho_options" />
         <!-- Adding security through hidden referrer field -->
         <?php wp_nonce_field( 'ch2pho' ); ?>
-        Account Name: <input type="text" name="ga_account_name" value="<?php echo esc_html( $options['ga_account_name'] );
-          ?>"/><br />
-        Track Outgoing Links: <input type="checkbox" name="track_outgoing_links" <?php if (
-        $options['track_outgoing_links'] ) echo ' checked="checked" ';
-        ?>/><br />
-        <input type="submit" value="Submit"
-          class="button-primary"/>
+        <!-- Security fields for meta box save processing -->
+
+        <?php wp_nonce_field( 'closedpostboxes',
+          'closedpostboxesnonce', false ); ?>
+        <?php wp_nonce_field( 'meta-box-order',
+          'meta-box-order-nonce', false ); ?>
+        <div id="poststuff" class="metabox-holder">
+          <div id="post-body">
+            <div id="post-body-content">
+              <?php do_meta_boxes( $options_page, 'normal', $options) ;
+              ?>
+              <input type="submit" value="Submit"
+                class="button-primary"/>
+            </div>
+          </div>
+          <br class="clear"/>
+        </div>
       </form>
     </div>
+    <script type="text/javascript">
+      //<![CDATA[
+      jQuery( document ).ready( function( $ ) {
+// close postboxes that should be closed
+        $( '.if-js-closed' ) .removeClass( 'if-js-closed' ).
+          addClass( 'closed' );
+// postboxes setup
+        postboxes.add_postbox_toggles
+          ( '<?php echo $options_page; ?>' );
+      });
+      //]]>
+    </script>
   <?php }
+
 
   add_action( 'admin_init', 'ch2pho_admin_init' );
 
@@ -191,4 +227,31 @@
                                        'message' => '1' ), admin_url( 'options-general.php' ) ) );
     exit;
   }
+
+  add_action( 'admin_enqueue_scripts', 'ch2pho_load_admin_scripts' );
+
+  function ch2pho_load_admin_scripts() {
+    global $current_screen;
+    global $options_page;
+    if ( $current_screen->id == $options_page ) {
+      wp_enqueue_script( 'common' );
+      wp_enqueue_script( 'wp-lists' );
+      wp_enqueue_script( 'postbox' );
+    }
+  }
+  function ch2pho_plugin_meta_box( $options ) { ?>
+Account Name: <input type="text" name="ga_account_name"
+      value="<?php echo esc_html( $options['ga_account_name'] );
+      ?>"/><br />
+    Track Outgoing Links <input type="checkbox"
+      name="track_outgoing_links" <?php if (
+    $options['track_outgoing_links'] ) echo '
+checked="checked" ';
+    ?>/><br />
+  <?php }
+
+  function ch2pho_second_meta_box($options) { ?>
+    <p>This is the content of the second metabox.</p>
+  <?php }
+
 ?>
