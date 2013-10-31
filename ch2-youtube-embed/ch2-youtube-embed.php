@@ -15,21 +15,22 @@
   function ch2ye_youtube_embed_shortcode ( $atts ) {
     extract( shortcode_atts(
       array(
-        'id' => '',
+        'id'        => '',
         'option_id' => ''
       ), $atts ) );
 
     if ( empty( $option_id ) ||
       intval( $option_id ) < 1 ||
-      intval( $option_id ) > 5 ) {
+      intval( $option_id ) > 5
+    ) {
       $option_id = 1;
     }
     $option_name = 'ch2ye_options_' . intval( $option_id );
-    $options = get_option( $option_name );
-    $output = '<iframe width="' . $options['width'];
-    $output .= '" height="' . $options['height'];
+    $options     = get_option( $option_name );
+    $output      = '<iframe width="' . $options[ 'width' ];
+    $output .= '" height="' . $options[ 'height' ];
     $output .= '" src="http://www.youtube.com/embed/' . $id;
-    $output .= ( $options['show_suggestions'] == true ? "" : "?rel=0" );
+    $output .= ( $options[ 'show_suggestions' ] == true ? "" : "?rel=0" );
     $output .= '" frameborder="0" allowfullscreen></iframe>';
 
     return $output;
@@ -80,10 +81,7 @@
     <div id="ch2ye-general" class="wrap">
       <h2>YouTube Embed</h2>
       <!-- Display message when settings are saved -->
-      <?php if ( isset( $_GET[ 'message' ] )
-        && $_GET[ 'message' ] == '1'
-      ) {
-        ?>
+      <?php if ( isset( $_GET[ 'message' ] ) && $_GET[ 'message' ] == '1' ) { ?>
         <div id='message' class='updated fade'><p><strong>Settings Saved </strong></p></div>
       <?php } ?>
       <!-- Option selector -->
@@ -92,21 +90,16 @@
         <?php for ( $counter = 1; $counter <= 5; $counter ++ ) {
           $temp_option_name = "ch2ye_options_" . $counter;
           $temp_options     = get_option( $temp_option_name );
-          $class            =
-            ( $counter == $option_id ) ? ' nav-tab-active' : '';?>
-          <a class="nav-tab<?php echo $class; ?>" href="<?php echo
-          add_query_arg( array( 'page' => 'ch2ye-youtube-embed', 'option_id'
-                                       => $counter ), admin_url( 'options-general.php' ) ); ?>"><?php
+          $class = ( $counter == $option_id ) ? ' nav-tab-active' : '';?>
+          <a class="nav-tab<?php echo $class; ?>" href="<?php echo add_query_arg( array( 'page' => 'ch2ye-youtube-embed', 'option_id' => $counter ), admin_url( 'options-general.php' ) ); ?>"><?php
               echo $counter; ?><?php if ( $temp_options !== false )
-                echo ' (' .
-                  $temp_options[ 'setting_name' ] . ')'; else echo ' (Empty)'; ?></a>
+                echo ' (' . $temp_options[ 'setting_name' ] . ')'; else echo ' (Empty)'; ?></a>
         <?php } ?>
       </h2>
       <br />
       <!-- Main options form -->
       <form name="ch2ye_options_form" method="post" action="admin-post.php">
-        <input type="hidden" name="action" value="save_ch2ye_options" />
-        <input type="hidden" name="option_id" value="<?php echo $option_id; ?>" />
+        <input type="hidden" name="action" value="save_ch2ye_options" /> <input type="hidden" name="option_id" value="<?php echo $option_id; ?>" />
         <?php wp_nonce_field( 'ch2ye' ); ?>
         <table>
           <tr>
@@ -123,11 +116,11 @@
           </tr>
           <tr>
             <td>Display suggestions after viewing</td>
-            <td><input type="checkbox" name="show_suggestions" <?php if ( $options[ 'show_suggestions' ] )
-                echo ' checked="checked"'; ?>/></td>
+            <td><input type="checkbox" name="show_suggestions" <?php if ( $options[ 'show_suggestions' ] ) echo ' checked="checked"'; ?>/></td>
           </tr>
         </table>
-        <br /> <input type="submit" value="Submit" class="button-primary" />
+        <br />
+        <input type="submit" value="Submit" class="button-primary" />
       </form>
     </div>
   <?php
@@ -140,17 +133,17 @@
 
   // Function to process user data submission
   function process_ch2ye_options () {
-  // Check that user has proper security level
+    // Check that user has proper security level
     if ( ! current_user_can( 'manage_options' ) )
       wp_die( 'Not allowed' );
     // Check that nonce field is present
-    check_admin_referer( 'ch2ye' );
+    check_admin_referer( 'ch2yey' );
     // Check if option_id field was present
     if ( isset( $_POST[ 'option_id' ] ) )
       $option_id = $_POST[ 'option_id' ];
     else
       $option_id = 1;
-     // Build option name and retrieve options
+    // Build option name and retrieve options
     $options_name = 'ch2ye_options_' . $option_id;
     $options      = get_option( $options_name );
     // Cycle through all text fields and store their values
@@ -164,16 +157,20 @@
       if ( isset( $_POST[ $param_name ] ) ) {
         $options[ $param_name ] = true;
       } else {
-        $options[$param_name] = false;
+        $options[ $param_name ] = false;
       }
     }
     // Store updated options array to database
     update_option( $options_name, $options );
-    $cleanaddress =
-      add_query_arg( array( 'message' => 1,
-                            'option_id' => $option_id,
-                            'page' => 'ch2ye-youtube-embed' ), admin_url( 'options-general.php' ) );
+
+    $cleanaddress = add_query_arg( array(
+      'message'   => 1,
+      'option_id' => $option_id,
+      'page'      => 'ch2ye-youtube-embed'
+    ), admin_url( 'options-general.php' ) );
+
     wp_redirect( $cleanaddress );
     exit;
   }
-        ?>
+
+?>
