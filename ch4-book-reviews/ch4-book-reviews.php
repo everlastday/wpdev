@@ -34,11 +34,28 @@
         'public' => true,
         'menu_position' => 20,
      //   'supports' => array( 'title', 'editor', 'comments', 'thumbnail', 'custom-fields' ),
+        'supports' => array( 'title', 'editor', 'comments', 'thumbnail', ),
         'taxonomies' => array( '' ),
         'menu_icon' => plugins_url( 'book-16x16.png', __FILE__ ),
         'has_archive' => true
       )
     );
+    // register_taxonomy( $taxonomy_name, $post_type, $options );
+    register_taxonomy(
+      'book_reviews_book_type',
+      'book_reviews',
+      array(
+        'labels' => array(
+          'name' => 'Book Type',
+          'add_new_item' => 'Add New Book Type',
+          'new_item_name' => "New Book Type Name"
+        ),
+        'show_ui' => false,
+        'show_tagcloud' => false,
+        'hierarchical' => true
+      )
+    );
+
   }
 
   add_action( 'admin_init', 'ch4_br_admin_init' );
@@ -73,6 +90,30 @@
           </select>
         </td>
       </tr>
+      <tr>
+        <td>Book Type</td>
+        <td>
+          <?php
+            // Retrieve array of types assigned to post
+            $assigned_types = wp_get_post_terms( $book_review->ID,
+              'book_reviews_book_type' );
+            // Retrieve array of all book types in system
+            $book_types = get_terms( 'book_reviews_book_type',
+              array( 'orderby' => 'name',
+                     'hide_empty' => 0) );
+            if ( $book_types ) {
+              echo '<select name="book_review_book_type"';
+              echo ' style="width: 400px">';
+              foreach ( $book_types as $book_type ) {
+                echo '<option value="' . $book_type->term_id;
+                echo '" ' . selected( $assigned_types[0]->term_id, $book_type->term_id ) . '>';
+                echo esc_html( $book_type->name );
+                echo '</option>';
+              }
+              echo '</select>';
+            } ?>
+        </td>
+      </tr>
     </table>
   <?php }
 
@@ -89,6 +130,9 @@
       if ( isset( $_POST['book_review_rating'] ) && $_POST['book_review_rating'] != '' ) {
         update_post_meta( $book_review_id, 'book_rating', $_POST['book_review_rating'] );
       }
+      if ( isset( $_POST['book_review_book_type'] ) && $_POST['book_review_book_type'] != '' ) {
+        wp_set_post_terms( $book_review->ID, $_POST['book_review_book_type'], 'book_reviews_book_type' );
+      }
     }
   }
 
@@ -104,11 +148,130 @@
         } else {
           $template_path = plugin_dir_path( __FILE__ ) . '/single-book_reviews.php';
         }
+      }  elseif ( is_archive() ) {
+        if ( $theme_file = locate_template( array ( 'archive-book_reviews.php' ) ) ) {
+          $template_path = $theme_file;
+        } else {
+          $template_path = plugin_dir_path( __FILE__ ) . '/archive-book_reviews.php';
+        }
       }
     }
-
     return $template_path;
   }
 
+  add_shortcode( 'book-review-list', 'ch4_br_book_review_list' );
+
+  function ch4_br_book_review_list() {
+    // Preparation of query array to retrieve 5 book reviews
+    $query_params = array( 'post_type' => 'book_reviews',
+                           'post_status' => 'publish',
+                           'posts_per_page' => 5 );
+    // Retrieve page query variable, if present
+    $page_num = ( get_query_var( 'paged' ) ? get_query_var( 'paged' ) : 1 );
+    // If page number is higher than 1, add to query array
+    if ( $page_num != 1 )
+      $query_params['paged'] = $page_num;
+
+
+    // Execution of post query
+    $book_review_query = new WP_Query;
+    $book_review_query->query( $query_params );
+    // Check if any posts were returned by the query
+    if ( $book_review_query->have_posts() ) {
+      // Display posts in table layout
+      $output = '<table>';
+      $output .= '<tr><th style="width: 350px"><strong>';
+      $output .= 'Title</strong></th>';
+      $output .= '<th><strong>Author</strong></th></tr>';
+      // Cycle through all items retrieved
+      while ( $book_review_query->have_posts() ) {
+        $book_review_query->the_post();
+        $output .= '<tr><td><a href="' . post_permalink();
+        $output .= '">';
+        $output .= get_the_title( get_the_ID() ) . '</a></td>';
+        $output .= '<td>';
+        $output .= esc_html( get_post_meta( get_the_ID(), 'book_author', true ) );
+        $output .= '</td></tr>';
+      }
+      $output .= '</table>';
+      // Display page navigation links
+      if ( $book_review_query->max_num_pages > 1 ) {
+        $output .= '<nav id="nav-below">';
+        $output .= '<div class="nav-previous">';
+        $output .= get_next_posts_link( '<span class="meta-nav">&larr;</span>Older reviews', $book_review_query->max_num_pages );
+        $output .= '</div>';
+        $output .= '<div class="nav-next">';
+        $output .= get_previous_posts_link( 'Newer reviews <span class="meta-nav">&rarr;</span>', $book_review_query->max_num_pages );
+        $output .= '</div>';
+        $output .= '</nav>';
+      }
+    // Reset post data query
+      wp_reset_postdata();
+    }
+    return $output;
+  }
+
+  add_action( 'admin_menu', 'ch4_br_add_book_type_item' );
+
+  function ch4_br_add_book_type_item() {
+    global $submenu;
+    $submenu['edit.php?post_type=book_reviews'][501] =
+      array( 'Book Type', 'manage_options',
+        admin_url( '/edit-tags.php?taxonomy=book_reviews_book_type&post_type=book_reviews' ) );
+  }
+
+  add_filter( 'manage_edit-book_reviews_columns', 'ch4_br_add_columns' );
+
+  function ch4_br_add_columns( $columns ) {
+    $columns['book_reviews_author'] = 'Author';
+    $columns['book_reviews_rating'] = 'Rating';
+    $columns['book_reviews_type'] = 'Type';
+    unset( $columns['comments'] );
+    return $columns;
+  }
+
+
+  // Вивід стовбців в таблиці
+  add_action( 'manage_posts_custom_column', 'ch4_br_populate_columns' );
+  function ch4_br_populate_columns( $column ) {
+    if ( 'book_reviews_author' == $column ) {
+      $book_author = esc_html( get_post_meta( get_the_ID(), 'book_author', true ) );
+      echo $book_author;
+    } elseif ( 'book_reviews_rating' == $column ) {
+      $book_rating = get_post_meta( get_the_ID(), 'book_rating', true );
+      echo $book_rating . ' stars';
+    } elseif ( 'book_reviews_type' == $column ) {
+      $book_types = wp_get_post_terms( get_the_ID(), 'book_reviews_book_type' );
+      if ( $book_types )
+        echo $book_types[0]->name;
+      else
+        echo 'None Assigned';
+    }
+  }
+  // Можливість сортування в таблиці деяких полів
+  add_filter( 'manage_edit-book_reviews_sortable_columns', 'ch4_br_author_column_sortable' );
+
+  function ch4_br_author_column_sortable( $columns ) {
+    $columns['book_reviews_author'] = 'book_reviews_author';
+    $columns['book_reviews_rating'] = 'book_reviews_rating';
+    return $columns;
+  }
+
+  add_filter( 'request', 'ch4_br_column_ordering' );
+
+  function ch4_br_column_ordering( $vars ) {
+    if ( !is_admin() )
+      return $vars;
+    if ( isset( $vars['orderby'] ) &&'book_reviews_author' == $vars['orderby'] ) {
+      $vars = array_merge( $vars, array(
+        'meta_key' => 'book_author',
+        'orderby' => 'meta_value' ) );
+    } elseif ( isset( $vars['orderby'] ) && 'book_reviews_rating' == $vars['orderby'] ) {
+      $vars = array_merge( $vars, array(
+        'meta_key' => 'book_rating',
+        'orderby' => 'meta_value_num' ) );
+    }
+    return $vars;
+  }
 
 ?>
