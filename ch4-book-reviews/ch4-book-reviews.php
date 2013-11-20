@@ -274,4 +274,43 @@
     return $vars;
   }
 
+  add_action( 'restrict_manage_posts', 'ch4_br_book_type_filter_list' );
+
+  function ch4_br_book_type_filter_list() {
+    $screen = get_current_screen();
+    global $wp_query;
+    if ( $screen->post_type == 'book_reviews' ) {
+      wp_dropdown_categories(array(
+        'show_option_all' => 'Show All Book Types',
+        'taxonomy' => 'book_reviews_book_type',
+        'name' => 'book_reviews_book_type',
+        'orderby' => 'name',
+        'selected' => ( isset( $wp_query->query['book_reviews_book_type'] ) ?  $wp_query->query['book_reviews_book_type'] : '' ),
+        'hierarchical' => false,
+        'depth' => 3,
+        'show_count' => false,
+        'hide_empty' => true,
+      ));
+    }
+  }
+  add_filter( 'parse_query', 'ch4_br_perform_book_type_filtering' );
+
+  function ch4_br_perform_book_type_filtering( $query ) {
+    $qv = &$query->query_vars;
+    if ( empty( $qv['book_reviews_book_type'] ) &&
+      is_numeric( $qv['book_reviews_book_type'] ) ) {
+      $term = get_term_by( 'id', $qv['book_reviews_book_type'], 'book_reviews_book_type' );
+      $qv['book_reviews_book_type'] = $term->slug;
+    }
+  }
+
+  add_filter( 'wp_title', 'ch4_br_format_book_review_title' );
+
+  function ch4_br_format_book_review_title( $the_title ) {
+    if ( get_post_type() == 'book_reviews' && is_single() ) {
+      $book_author = esc_html( get_post_meta( get_the_ID(), 'book_author', true ) );
+      $the_title .= ' by ' . $book_author;
+    }
+    return $the_title;
+  }
 ?>
