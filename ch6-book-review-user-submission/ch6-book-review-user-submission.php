@@ -212,7 +212,7 @@
             $email_title = htmlspecialchars_decode( get_bloginfo(),
                 ENT_QUOTES ) . " - New Book Review Added: " .
               htmlspecialchars( $_POST[ 'book_title' ] );
-// Send e-mail
+            // Send e-mail
             wp_mail( $admin_mail, $email_title, $message, $headers );
           }
         }
